@@ -10,4 +10,8 @@ func init() {
 
 func StartApp() {
 	url()
+
+	if err := router.Run(":8080"); err != nil {
+		panic(err)
+	}
 }

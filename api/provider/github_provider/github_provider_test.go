@@ -9,3 +9,7 @@ func TestGetAuthorizationHeader(t *testing.T) {
 	headerAuthorizationFormat := getAuthorizationHeader("123")
 	assert.EqualValues(t, "token 123", headerAuthorizationFormat)
 }
+
+func TestCreateRepoErrorRestClient(t *testing.T) {
+
+}

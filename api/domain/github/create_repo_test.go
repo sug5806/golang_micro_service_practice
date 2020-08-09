@@ -25,8 +25,8 @@ func TestCreateRepoRequest(t *testing.T) {
 	err = json.Unmarshal(bytes, &target)
 
 	assert.Nil(t, err)
-	assert.EqualValues(t, target.Name, "create repo request test")
-	assert.EqualValues(t, target.Description, "create repo request test description")
-	assert.EqualValues(t, target.Private, false)
-	assert.EqualValues(t, target.LicenseTemplate, "mit")
+	assert.EqualValues(t, target.Name, request.Name)
+	assert.EqualValues(t, target.Description, request.Description)
+	assert.EqualValues(t, target.Private, request.Private)
+	assert.EqualValues(t, target.LicenseTemplate, request.LicenseTemplate)
 }

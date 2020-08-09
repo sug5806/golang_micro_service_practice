@@ -10,7 +10,7 @@ import (
 
 var (
 	enableMocks = false
-	mock        = make(map[string]*Mock)
+	mocks       = make(map[string]*Mock)
 )
 
 type Mock struct {
@@ -32,11 +32,21 @@ func StopMockups() {
 	enableMocks = false
 }
 
+func AddMock(mock *Mock) {
+	mocks[getMockId(mock.HttpMethod, mock.Url)] = mock
+}
+
+func FlushMockups() {
+	mocks = make(map[string]*Mock)
+}
+
 func Post(url string, body interface{}, headers http.Header) (*http.Response, error) {
 	if enableMocks {
-		mock := mock[getMockId(http.MethodPost, url)]
+		mock := mocks[getMockId(http.MethodPost, url)]
 		if mock == nil {
 			return nil, errors.New("no exist mock up data")
+		} else {
+			return mock.Response, mock.Error
 		}
 	}
 

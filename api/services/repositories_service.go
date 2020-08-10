@@ -6,7 +6,9 @@ import (
 	"golang_micro_service_practice/api/domain/repositories"
 	"golang_micro_service_practice/api/provider/github_provider"
 	"golang_micro_service_practice/api/utils/errors"
+	"net/http"
 	"strings"
+	"sync"
 )
 
 type repoService struct {
@@ -14,6 +16,7 @@ type repoService struct {
 
 type repoServiceInterface interface {
 	CreateRepo(request repositories.CreateRepoRequest) (*repositories.CreateRepoResponse, errors.ApiError)
+	CreateRepos(requests []repositories.CreateRepoRequest) (*repositories.CreateReposResponse, errors.ApiError)
 }
 
 var (
@@ -48,4 +51,70 @@ func (r *repoService) CreateRepo(request repositories.CreateRepoRequest) (*repos
 		Owner: response.Owner.Login,
 		Name:  response.Name,
 	}, nil
+}
+
+func (r *repoService) CreateRepos(requests []repositories.CreateRepoRequest) (*repositories.CreateReposResponse, errors.ApiError) {
+	input := make(chan repositories.CreateRepositoriesResult)
+	output := make(chan repositories.CreateReposResponse)
+	var wg sync.WaitGroup
+	defer close(output)
+
+	go r.handleRepoResults(&wg, input, output)
+
+	for _, current := range requests {
+		wg.Add(1)
+		r.CreateRepo(current)
+	}
+
+	wg.Wait()
+	close(input)
+
+	result := <-output
+
+	successCreation := 0
+	for _, current := range result.Results {
+		if current.Response != nil {
+			successCreation++
+		}
+	}
+
+	if successCreation == 0 {
+		result.StatusCode = result.Results[0].Error.ApiStatus()
+	} else if successCreation == len(requests) {
+		result.StatusCode = http.StatusCreated
+	} else {
+		result.StatusCode = http.StatusPartialContent
+	}
+
+	return &result, nil
+}
+
+func (r *repoService) handleRepoResults(wg *sync.WaitGroup, input chan repositories.CreateRepositoriesResult, output chan repositories.CreateReposResponse) {
+	var results repositories.CreateReposResponse
+
+	for incomingEvent := range input {
+		repoResult := repositories.CreateRepositoriesResult{
+			Response: incomingEvent.Response,
+			Error:    incomingEvent.Error,
+		}
+		results.Results = append(results.Results, repoResult)
+
+		wg.Done()
+	}
+	output <- results
+}
+
+func (r *repoService) createRepoConcurrent(input repositories.CreateRepoRequest, output chan repositories.CreateRepositoriesResult) {
+	if err := input.Validate(); err != nil {
+		output <- repositories.CreateRepositoriesResult{Error: err}
+		return
+	}
+
+	result, err := r.CreateRepo(input)
+	if err != nil {
+		output <- repositories.CreateRepositoriesResult{Error: err}
+		return
+	}
+
+	output <- repositories.CreateRepositoriesResult{Response: result}
 }

@@ -1,4 +1,4 @@
-package test_tuils
+package test_utils
 
 import (
 	"github.com/gin-gonic/gin"

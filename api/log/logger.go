@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"golang_micro_service_practice/api/config"
 	"os"
@@ -33,7 +34,23 @@ func Info(msg string, tags ...string) {
 		return
 	}
 
-	Log.WithFields(parseFields(tags...))
+	Log.WithFields(parseFields(tags...)).Info(msg)
+}
+
+func Debug(msg string, tags ...string) {
+	if Log.Level < logrus.DebugLevel {
+		return
+	}
+
+	Log.WithFields(parseFields(tags...)).Debug(msg)
+}
+
+func Error(msg string, err error, tags ...string) {
+	if Log.Level < logrus.ErrorLevel {
+		return
+	}
+	msg = fmt.Sprintf("%s - ERROR - %v", msg, err)
+	Log.WithFields(parseFields(tags...)).Error(msg)
 }
 
 func parseFields(tags ...string) logrus.Fields {
@@ -45,5 +62,4 @@ func parseFields(tags ...string) logrus.Fields {
 	}
 
 	return result
-
 }

@@ -12,9 +12,9 @@ func init() {
 }
 
 func StartApp() {
-	log.Log.Info("about to map the urls")
+	log.Log.Info("about to map the urls", "step:1", "status:pending")
 	url()
-	log.Log.Info("urls successfully mapped")
+	log.Log.Info("urls successfully mapped", "step:2", "status:success")
 
 	if err := router.Run(":8080"); err != nil {
 		panic(err)

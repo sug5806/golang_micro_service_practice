@@ -1,9 +1,11 @@
 package services
 
 import (
+	"fmt"
 	"golang_micro_service_practice/api/config"
 	"golang_micro_service_practice/api/domain/github"
 	"golang_micro_service_practice/api/domain/repositories"
+	"golang_micro_service_practice/api/log"
 	"golang_micro_service_practice/api/provider/github_provider"
 	"golang_micro_service_practice/api/utils/errors"
 	"net/http"
@@ -15,8 +17,8 @@ type repoService struct {
 }
 
 type repoServiceInterface interface {
-	CreateRepo(request repositories.CreateRepoRequest) (*repositories.CreateRepoResponse, errors.ApiError)
-	CreateRepos(requests []repositories.CreateRepoRequest) (*repositories.CreateReposResponse, errors.ApiError)
+	CreateRepo(clientId string, request repositories.CreateRepoRequest) (*repositories.CreateRepoResponse, errors.ApiError)
+	CreateRepos(clientId string, requests []repositories.CreateRepoRequest) (*repositories.CreateReposResponse, errors.ApiError)
 }
 
 var (
@@ -27,7 +29,7 @@ func init() {
 	RepositoryService = &repoService{}
 }
 
-func (r *repoService) CreateRepo(request repositories.CreateRepoRequest) (*repositories.CreateRepoResponse, errors.ApiError) {
+func (r *repoService) CreateRepo(clientId string, request repositories.CreateRepoRequest) (*repositories.CreateRepoResponse, errors.ApiError) {
 	name := strings.TrimSpace(request.Name)
 	if name == "" {
 		return nil, errors.NewApiBadRequestError("invalid repository name")
@@ -39,12 +41,16 @@ func (r *repoService) CreateRepo(request repositories.CreateRepoRequest) (*repos
 		Private:         false,
 		LicenseTemplate: "mit",
 	}
+	log.Info("about to send request to external api", fmt.Sprintf("client_id: %s", clientId), "status:pending")
 
 	response, err := github_provider.CreateRepo(config.GetGithubAccessToken(), githubRequest)
 
 	if err != nil {
+		log.Error("about to send request to external api", err, fmt.Sprintf("client_id: %s", clientId), "status:error")
 		return nil, errors.NewApiError(err.StatusCode, err.Message)
 	}
+
+	log.Info("about to send request to external api", fmt.Sprintf("client_id: %s", clientId), "status:success")
 
 	return &repositories.CreateRepoResponse{
 		Id:    uint64(response.Id),
@@ -53,7 +59,7 @@ func (r *repoService) CreateRepo(request repositories.CreateRepoRequest) (*repos
 	}, nil
 }
 
-func (r *repoService) CreateRepos(requests []repositories.CreateRepoRequest) (*repositories.CreateReposResponse, errors.ApiError) {
+func (r *repoService) CreateRepos(clientId string, requests []repositories.CreateRepoRequest) (*repositories.CreateReposResponse, errors.ApiError) {
 	input := make(chan repositories.CreateRepositoriesResult)
 	output := make(chan repositories.CreateReposResponse)
 	var wg sync.WaitGroup
@@ -61,9 +67,9 @@ func (r *repoService) CreateRepos(requests []repositories.CreateRepoRequest) (*r
 
 	go r.handleRepoResults(&wg, input, output)
 
-	for _, current := range requests {
+	for _, request := range requests {
 		wg.Add(1)
-		r.CreateRepo(current)
+		go r.createRepoConcurrent(clientId, request, input)
 	}
 
 	wg.Wait()
@@ -104,13 +110,13 @@ func (r *repoService) handleRepoResults(wg *sync.WaitGroup, input chan repositor
 	output <- results
 }
 
-func (r *repoService) createRepoConcurrent(input repositories.CreateRepoRequest, output chan repositories.CreateRepositoriesResult) {
+func (r *repoService) createRepoConcurrent(clientId string, input repositories.CreateRepoRequest, output chan repositories.CreateRepositoriesResult) {
 	if err := input.Validate(); err != nil {
 		output <- repositories.CreateRepositoriesResult{Error: err}
 		return
 	}
 
-	result, err := r.CreateRepo(input)
+	result, err := r.CreateRepo(clientId, input)
 	if err != nil {
 		output <- repositories.CreateRepositoriesResult{Error: err}
 		return

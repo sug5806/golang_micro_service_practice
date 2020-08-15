@@ -5,7 +5,7 @@ import (
 	"golang_micro_service_practice/api/config"
 	"golang_micro_service_practice/api/domain/github"
 	"golang_micro_service_practice/api/domain/repositories"
-	"golang_micro_service_practice/api/log"
+	"golang_micro_service_practice/api/log/option_a"
 	"golang_micro_service_practice/api/provider/github_provider"
 	"golang_micro_service_practice/api/utils/errors"
 	"net/http"
@@ -41,16 +41,29 @@ func (r *repoService) CreateRepo(clientId string, request repositories.CreateRep
 		Private:         false,
 		LicenseTemplate: "mit",
 	}
-	log.Info("about to send request to external api", fmt.Sprintf("client_id: %s", clientId), "status:pending")
+
+	option_a.Info("about to send request to external api", fmt.Sprintf("client_id: %s", clientId), "status:pending")
+	//option_b.Info("about to send request to external api",
+	//	option_b.Field("client_id", clientId),
+	//	option_b.Field("status", "pending"),
+	//)
 
 	response, err := github_provider.CreateRepo(config.GetGithubAccessToken(), githubRequest)
 
 	if err != nil {
-		log.Error("about to send request to external api", err, fmt.Sprintf("client_id: %s", clientId), "status:error")
+		option_a.Error("about to send request to external api", err, fmt.Sprintf("client_id: %s", clientId), "status:error")
+		//option_b.Error("about to send request to external api", err,
+		//	option_b.Field("client_id", clientId),
+		//	option_b.Field("status", "pending"),
+		//)
 		return nil, errors.NewApiError(err.StatusCode, err.Message)
 	}
 
-	log.Info("about to send request to external api", fmt.Sprintf("client_id: %s", clientId), "status:success")
+	option_a.Info("about to send request to external api", fmt.Sprintf("client_id: %s", clientId), "status:success")
+	//option_b.Info("about to send request to external api",
+	//	option_b.Field("client_id", clientId),
+	//	option_b.Field("status", "pending"),
+	//	)
 
 	return &repositories.CreateRepoResponse{
 		Id:    uint64(response.Id),

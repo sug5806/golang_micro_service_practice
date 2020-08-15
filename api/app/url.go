@@ -7,6 +7,6 @@ import (
 
 func url() {
 	router.GET("/", hello.Hello)
-	router.POST("/create_repo", repositories.CreateRepo)
-	router.POST("/create_repos", repositories.CreateRepos)
+	router.POST("/repository", repositories.CreateRepo)
+	router.POST("/repositories", repositories.CreateRepos)
 }

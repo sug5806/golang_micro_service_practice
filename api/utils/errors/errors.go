@@ -60,6 +60,13 @@ func NewApiResponseError(message string) ApiError {
 	}
 }
 
+func NewNotFoundError(message string) ApiError {
+	return &apiError{
+		Code:    http.StatusNotFound,
+		Message: message,
+	}
+}
+
 func NewApiBadRequestError(message string) ApiError {
 	return &apiError{
 		Code:    http.StatusBadRequest,
